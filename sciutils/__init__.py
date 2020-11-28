@@ -5,15 +5,12 @@ class ParameterReshaper:
     """
     Reshape an array of parameters to a dictionary of named parameters and vice versa.
 
+    Trailing dimensions of each parameter are considered batch dimensions and are left unchanged.
+
     Parameters
     ----------
     parameters : dict[str, tuple]
         Mapping from parameter names to shapes.
-
-    Notes
-    -----
-    The trailing dimensions are considered batch dimensions and are not modified. Inputs are not
-    validated to improve performance.
 
     Examples
     --------
@@ -33,65 +30,99 @@ class ParameterReshaper:
         self.sizes = {key: np.prod(shape, dtype=int) for key, shape in self.parameters.items()}
         self.size = sum(self.sizes.values())
 
-    def to_array(self, values):
+    def to_array(self, values, moveaxis=False, validate=True):
         """
-        Convert a dictionary of values to a vector.
+        Convert a dictionary of values to an array.
 
         Parameters
         ----------
-        x : dict[str, np.ndarray]
+        values : dict[str, np.ndarray]
             Mapping from parameter names to values.
+        moveaxis : bool
+            Move the first axis to the last dimension after reshaping to an array, e.g. if the batch
+            dimensions are leading.
+        validate : bool
+            Validate the input at some cost to performance.
 
         Returns
         -------
-        y : np.ndarray
+        array : np.ndarray
             Array of parameters encoding the named parameters.
         """
-        vector = None
+        if validate:
+            batch_shapes = set()
+            for key, value in values.items():
+                shape = self.parameters.get(key)
+                if shape is None:
+                    raise KeyError(f'extraneous parameter: {key}')
+                actual_shape = np.shape(value)[:len(shape)]
+                if actual_shape != shape:
+                    raise ValueError(f'the leading shape of {key} is {actual_shape}; '
+                                     f'expected {shape}')
+                batch_shapes.add(np.shape(value)[len(shape):])
+            if len(batch_shapes) > 1:
+                raise ValueError('parameters have inconsistent batch shapes: ' +
+                                 ', '.join(map(str, batch_shapes)))
+        array = None
         offset = 0
         for key, shape in self.parameters.items():
             value = values[key]
-            if vector is None:
+            if array is None:
                 batch_shape = np.shape(value)[len(shape):]
-                vector = np.empty((self.size,) + batch_shape)
+                array = np.empty((self.size,) + batch_shape)
             # Just set the scalar element for a 0-rank tensor
             if not shape:
-                vector[offset] = value
+                array[offset] = value
                 offset += 1
                 continue
             # Flatten any tensor with rank two or larger
             if len(shape) > 1:
                 value = np.reshape(value, (-1,) + batch_shape)
-            # Set the vector of parameters
-            vector[offset:offset + value.shape[0]] = value
+            # Set the array of parameters
+            array[offset:offset + value.shape[0]] = value
             offset += value.shape[0]
-        return vector
+        if moveaxis:
+            array = np.moveaxis(array, 0, -1)
+        return array
 
-    def to_dict(self, vector):
+    def to_dict(self, array, moveaxis=False, validate=True):
         """
-        Convert a vector to a dictionary of values.
+        Convert an array to a dictionary of values.
+
+        Trailing dimensions of the array are considered batch dimensions and are left unchanged.
 
         Parameters
         ----------
-        x : np.ndarray
+        array : np.ndarray
             Array of parameters encoding a parameter set.
+        moveaxis : bool
+            Move the last axis to the first dimension before reshaping to a dictionary, e.g. if the
+            batch dimensions are leading.
+        validate : bool
+            Validate the input at some cost to performance.
 
         Returns
         -------
-        y : dict[str, np.ndarray]
+        values : dict[str, np.ndarray]
             Mapping from parameter names to values.
         """
+        if moveaxis:
+            array = np.moveaxis(array, -1, 0)
+        if validate:
+            if array.shape[0] != self.size:
+                raise ValueError(f'the first dimension of the array has size {array.shape[0]}; '
+                                 f'expected {self.size}')
         values = {}
         offset = 0
-        batch_shape = np.shape(vector)[1:]
+        batch_shape = np.shape(array)[1:]
         for key, shape in self.parameters.items():
             # Handle the scalar case
             if not shape:
-                values[key] = vector[offset]
+                values[key] = array[offset]
                 offset += 1
                 continue
             size = self.sizes[key]
-            value = vector[offset:offset + size]
+            value = array[offset:offset + size]
             # Reshape to the desired parameter shape
             if len(shape) > 1:
                 value = np.reshape(value, shape + batch_shape)
