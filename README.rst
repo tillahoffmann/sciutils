@@ -17,3 +17,6 @@ Interface
 
 .. automodule:: sciutils
    :members:
+
+.. automodule:: sciutils.stats
+   :members:

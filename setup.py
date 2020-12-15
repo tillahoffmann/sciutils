@@ -23,6 +23,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'numpy',
+        'scipy',
     ],
     extras_require={
         'tests': [
@@ -32,7 +33,7 @@ setup(
         ],
         'docs': [
             'sphinx',
-        ]
+        ],
     },
     long_description_content_type='text/x-rst',
     long_description=long_description,
