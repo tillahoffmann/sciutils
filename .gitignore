@@ -140,3 +140,5 @@ cython_debug/
 # Development directories
 .vscode
 playground/
+.pystan
+result_images/

@@ -1,2 +1,4 @@
 -e file:.[tests,docs]
+matplotlib
+pystan
 twine
