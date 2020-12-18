@@ -18,5 +18,14 @@ Interface
 .. automodule:: sciutils
    :members:
 
+Statistical distributions and utility functions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. automodule:: sciutils.stats
+   :members:
+
+Utility functions for plotting
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: sciutils.plot
    :members:
