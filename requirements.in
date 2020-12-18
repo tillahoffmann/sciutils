@@ -1,4 +1,5 @@
 -e file:.[tests,docs]
 matplotlib
 pystan
+shapely
 twine

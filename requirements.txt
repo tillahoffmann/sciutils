@@ -46,6 +46,7 @@ requests-toolbelt==0.9.1  # via twine
 requests==2.25.0          # via requests-toolbelt, sphinx, twine
 rfc3986==1.4.0            # via twine
 scipy==1.5.4              # via sciutils
+shapely==1.7.1            # via -r requirements.in
 six==1.15.0               # via bleach, cycler, python-dateutil, readme-renderer
 snowballstemmer==2.0.0    # via sphinx
 sphinx==3.3.1             # via sciutils
