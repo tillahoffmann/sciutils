@@ -9,7 +9,10 @@ sync : requirements.txt
 	pip-sync $<
 
 tests :
-	pytest -v --cov=sciutils --cov-fail-under=100 --cov-report=html --log-cli-level=INFO
+	pytest -v --cov=sciutils --cov-report=html --log-cli-level=INFO --cov-fail-under=100
+
+fast_tests :
+	pytest -v --cov=sciutils --cov-report=html --log-cli-level=INFO --skip-slow
 
 doctests :
 	sphinx-build -b doctest . docs/_build

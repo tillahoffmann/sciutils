@@ -12,7 +12,7 @@ import logging
 import numpy as np
 import os
 import pickle
-from scipy import special
+from scipy import special, stats
 
 
 LOGGER = logging.getLogger(__name__)
@@ -108,3 +108,60 @@ def maybe_build_model(model_code, root='.pystan', **kwargs):
             fp.write(model_code)
         LOGGER.info('dumped model to %s', filename)
     return model
+
+
+def evaluate_mode(x, lin=200, **kwargs):
+    """
+    Evaluate the mode of a univariate distribution based on samples using a kernel density estimate.
+
+    Parameters
+    ----------
+    x : array_like
+        Univariate samples from the distribution.
+    lin : array_like or int
+        Sample points at which to evaluate the density estimate or the number of sample points
+        across the range of the data.
+    **kwargs : dict
+        Additional arguments passed to the :class:`scipy.stats.gaussian_kde` constructor.
+
+    Returns
+    -------
+    mode : float
+
+    """
+    kde = stats.gaussian_kde(x, **kwargs)
+    if isinstance(lin, int):
+        lin = np.linspace(np.min(x), np.max(x), lin)
+    y = kde(lin)
+    return lin[np.argmax(y)]
+
+
+def evaluate_hpd_levels(pdf, pvals):
+    """
+    Evaluate the levels that include a given fraction of the the probability mass.
+
+    Parameters
+    ----------
+    pdf : array_like
+        Probability density function evaluated over a mesh.
+    pvals : array_like or int
+        Probability mass to be included within the corresponding level or the number of levels.
+
+    Returns
+    -------
+    levels : array_like
+        Contour levels of the probability density function that enclose the desired probability
+        mass.
+    """
+    # Obtain equidistant levels if only the number is given
+    if isinstance(pvals, int):
+        pvals = (pvals - np.arange(pvals)) / (pvals + 1)
+    pvals = np.atleast_1d(pvals)
+    # Sort the probability density and evaluate the normalised cumulative distribution
+    idx = np.argsort(-pdf.ravel())
+    cum = np.cumsum(pdf.ravel()[idx])
+    cum /= cum[-1]
+    # Find the indices corresponding to the levels
+    j = np.argmax(cum[:, None] > pvals, axis=0)
+    # Evaluate the levels
+    return pdf.ravel()[idx][j]
