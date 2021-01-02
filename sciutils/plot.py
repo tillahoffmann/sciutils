@@ -116,3 +116,29 @@ def plot_geometry(geometries, aspect='equal', autoscale=True, scale=1, ax=None, 
     if autoscale:
         ax.autoscale_view()
     return polys
+
+
+def alpha_cmap(color, name=''):
+    """
+    Create a monochrome colormap that maps scalars to varying transparencies.
+
+    Parameters
+    ----------
+    color : str, int, or tuple
+        Base color to use for the colormap.
+    name : str
+        Name of the colormap.
+    **kwargs : dict
+        Keyword arguments passed to :meth:`mpl.colors.LinearSegmentedColormap.from_list`.
+
+    Returns
+    -------
+    cmap : mpl.colors.Colormap
+        Colormap encoding scalars as transparencies.
+    """
+    if isinstance(color, int):
+        color = f'C{color}'
+    return mpl.colors.LinearSegmentedColormap.from_list(name, [
+        mpl.colors.to_rgba(color, alpha=0.0),
+        mpl.colors.to_rgba(color, alpha=1.0),
+    ])
