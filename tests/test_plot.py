@@ -62,3 +62,16 @@ def test_plot_geometry(fig_test, fig_ref):
 def test_plot_geometry_invalid():
     with pytest.raises(ValueError):
         sp.plot_geometry(None)
+
+
+@pytest.mark.parametrize('color', [0, 'k'])
+def test_alpha_cmap(color):
+    cmap = sp.alpha_cmap(color)
+    value = 0.7134
+    mapped = cmap(value)
+    # Check the colour
+    rgb = mpl.colors.to_rgb(f'C{color}' if isinstance(color, int) else color)
+    assert rgb == mapped[:3]
+    # Check the alpha channel
+    alpha = mapped[3]
+    assert abs(value - alpha) < 1e-3
