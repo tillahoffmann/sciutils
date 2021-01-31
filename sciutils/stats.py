@@ -202,3 +202,121 @@ def evaluate_hpd_mass(pdf):
     cum = np.cumsum(pdf[idx])
     cum /= cum[-1]
     return 1 - np.reshape(cum[np.argsort(idx)], shape)
+
+
+class TransformedVariable:
+    def apply(self, x):
+        """
+        Transform a variable from an unconstrained space to a possibly constrained space.
+
+        Parameters
+        ----------
+        x : array_like
+            Variable to transform.
+
+        Returns
+        -------
+        y : array_like
+            Transformed variable.
+        log_jacobian : array_like
+            Logarithm of the Jacobian associated with the transform.
+        """
+        raise NotImplementedError
+
+    def invert(self, y):
+        """
+        Transform a variable from a possibly constrained space to an untransformed space.
+
+        Parameters
+        ----------
+        y : array_like
+            Transformed variable.
+
+        Returns
+        -------
+        x : array_like
+            Variable after inverse transform.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def apply_transforms(transforms, values):
+        """
+        Apply transforms to a set of values.
+
+        Parameters
+        ----------
+        transforms : dict
+            Transforms by variable name.
+        values : dict
+            Variables to transform.
+
+        Returns
+        -------
+        values : dict
+            Variables with transforms applied.
+        log_jacobian : float
+            Logarithm of the Jacobian associated with all transforms.
+        """
+        log_jacobian = 0
+        for key, transform in transforms.items():
+            values[key], contrib = transform.apply(values[key])
+            log_jacobian += np.sum(contrib)
+        return values, log_jacobian
+
+    @staticmethod
+    def invert_transforms(transforms, values):
+        """
+        Apply inverse transforms to a set of values.
+
+        Parameters
+        ----------
+        transforms : dict
+            Transforms by variable name.
+        values : dict
+            Transformed variables.
+
+        Returns
+        -------
+        values : dict
+            Variables with inverse transforms applied.
+        """
+        for key, transform in transforms.items():
+            values[key] = transform.invert(values[key])
+        return values
+
+
+class SemiBoundedVariable(TransformedVariable):
+    r"""
+    A semi-bounded variable :math:`y = loc + scale\times\exp(x)` on the interval :math:`[loc, \inf]`
+    if :math:`scale > 0` and :math:`[-\inf, loc]` if :math:`scale < 0`.
+    """
+    def __init__(self, loc=0, scale=1):
+        self.loc = loc
+        self.scale = scale
+        self._log_scale = np.log(scale)
+
+    def apply(self, x):
+        expx = np.exp(x)
+        return self.loc + self.scale * expx, - self._log_scale - x
+
+    def invert(self, y):
+        return np.log((y - self.loc) / self.scale)
+
+
+class BoundedVariable(TransformedVariable):
+    r"""
+    A bounded variable :math:`y = a + \frac{(b - a)}{1 + \exp(-x)}` on the interval :math:`[a, b]`.
+    """
+    def __init__(self, a=0, b=1):
+        self.a = a
+        self.b = b
+        self.scale = b - a
+        self._log_scale = np.log(self.scale)
+
+    def apply(self, x):
+        expitx = special.expit(x)
+        return self.a + self.scale * expitx, - 2 * np.log(expitx) - self._log_scale + x
+
+    def invert(self, y):
+        return special.logit((y - self.a) / self.scale)
