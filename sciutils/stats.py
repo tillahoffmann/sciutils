@@ -143,7 +143,7 @@ def evaluate_hpd_levels(pdf, pvals):
     Parameters
     ----------
     pdf : array_like
-        Probability density function evaluated over a mesh.
+        Probability density function evaluated over a regular grid.
     pvals : array_like or int
         Probability mass to be included within the corresponding level or the number of levels.
 
@@ -181,8 +181,24 @@ def evaluate_hpd_levels(pdf, pvals):
 
     return np.asarray(levels)
 
+
+def evaluate_hpd_mass(pdf):
+    """
+    Evaluate the highest posterior density mass excluded from isocontours.
+
+    Parameters
+    ----------
+    pdf : array_like
+        Probability density function evaluated over a regular grid.
+
+    Returns
+    -------
+    excluded : array_like
+        The probability mass excluded at a given isocontour of the `pdf`.
+    """
+    shape = np.shape(pdf)
+    pdf = np.ravel(pdf)
+    idx = np.argsort(-pdf)
+    cum = np.cumsum(pdf[idx])
     cum /= cum[-1]
-    # Find the indices corresponding to the levels
-    j = np.argmax(cum[:, None] > pvals, axis=0)
-    # Evaluate the levels
-    return pdf.ravel()[idx][j]
+    return 1 - np.reshape(cum[np.argsort(idx)], shape)
