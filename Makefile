@@ -8,11 +8,13 @@ requirements.txt : requirements.in setup.py
 sync : requirements.txt
 	pip-sync $<
 
+TEST_COMMAND = pytest -v --cov=sciutils --cov-report=html --cov-report=term-missing --log-cli-level=INFO
+
 tests :
-	pytest -v --cov=sciutils --cov-report=html --log-cli-level=INFO --cov-fail-under=100
+	${TEST_COMMAND} --cov-fail-under=100
 
 fast_tests :
-	pytest -v --cov=sciutils --cov-report=html --log-cli-level=INFO --skip-slow
+	${TEST_COMMAND} --skip-slow
 
 doctests :
 	sphinx-build -b doctest . docs/_build

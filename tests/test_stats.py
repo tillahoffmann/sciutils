@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 import pytest
-from scipy import stats
+from scipy import stats, optimize
 from sciutils import stats as sus
 import tempfile
 
@@ -75,3 +75,46 @@ def test_evaluate_hpd_mass():
     (a, b), = np.nonzero(np.diff(mass < 0.5))
     np.testing.assert_array_less(np.abs(x[a] - stats.norm.ppf(.25)), 0.01)
     np.testing.assert_array_less(np.abs(x[b + 1] - stats.norm.ppf(.75)), 0.01)
+
+
+@pytest.fixture(params=[
+    sus.SemiBoundedVariable(3, 5),
+    sus.BoundedVariable(4, 7),
+])
+def transform(request):
+    return request.param
+
+
+def test_transform_jacobian(transform):
+    x = np.random.normal()
+    y, log_dxdy = transform.apply(x)
+    approx_dydx = optimize.approx_fprime(x, lambda x: transform.apply(x)[0], 1e-9)
+    np.testing.assert_allclose(log_dxdy, -np.log(approx_dydx), rtol=1e-4)
+    approx_dxdy = optimize.approx_fprime(y, transform.invert, 1e-9)
+    np.testing.assert_allclose(log_dxdy, np.log(approx_dxdy), rtol=1e-4)
+
+
+def test_transform_roundtrip(transform):
+    x = np.random.normal()
+    y, _ = transform.apply(x)
+    z = transform.invert(y)
+    np.testing.assert_allclose(x, z)
+
+
+def test_apply_transforms():
+    x1 = np.random.normal(size=10)
+    x2 = np.random.normal(size=13)
+    transforms = {'a': sus.BoundedVariable(), 'b': sus.SemiBoundedVariable()}
+    values, log_jacobian = sus.TransformedVariable.apply_transforms(
+        transforms, {'a': x1, 'b': x2},
+    )
+    assert np.isscalar(log_jacobian)
+    assert np.shape(values['a']) == (10,)
+    assert np.shape(values['b']) == (13,)
+    np.testing.assert_array_less(0, values['a'])
+    np.testing.assert_array_less(values['a'], 1)
+    np.testing.assert_array_less(0, values['b'])
+
+    values = sus.TransformedVariable.invert_transforms(transforms, values)
+    np.testing.assert_allclose(x1, values['a'])
+    np.testing.assert_allclose(x2, values['b'])
