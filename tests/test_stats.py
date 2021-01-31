@@ -66,3 +66,12 @@ def test_evaluate_hpd_levels(pvals):
     actual = sus.evaluate_hpd_levels(pdf, pvals)
     desired = stats.norm.pdf(stats.norm.ppf([0.1, 0.2, 0.3, 0.4]))
     np.testing.assert_array_less(np.abs(actual - desired), 0.01)
+
+
+def test_evaluate_hpd_mass():
+    x = np.linspace(-10, 10, 501)
+    pdf = stats.norm.pdf(x)
+    mass = sus.evaluate_hpd_mass(pdf)
+    (a, b), = np.nonzero(np.diff(mass < 0.5))
+    np.testing.assert_array_less(np.abs(x[a] - stats.norm.ppf(.25)), 0.01)
+    np.testing.assert_array_less(np.abs(x[b + 1] - stats.norm.ppf(.75)), 0.01)

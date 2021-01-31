@@ -12,7 +12,7 @@ import logging
 import numpy as np
 import os
 import pickle
-from scipy import special, stats
+from scipy import integrate, special, stats
 
 
 LOGGER = logging.getLogger(__name__)
@@ -143,7 +143,7 @@ def evaluate_hpd_levels(pdf, pvals):
     Parameters
     ----------
     pdf : array_like
-        Probability density function evaluated over a mesh.
+        Probability density function evaluated over a regular grid.
     pvals : array_like or int
         Probability mass to be included within the corresponding level or the number of levels.
 
@@ -157,11 +157,48 @@ def evaluate_hpd_levels(pdf, pvals):
     if isinstance(pvals, int):
         pvals = (pvals - np.arange(pvals)) / (pvals + 1)
     pvals = np.atleast_1d(pvals)
-    # Sort the probability density and evaluate the normalised cumulative distribution
-    idx = np.argsort(-pdf.ravel())
-    cum = np.cumsum(pdf.ravel()[idx])
+    # Sort the probability density and evaluate the normalised cumulative distribution. We aggregate
+    # identical pdf values so we can interpolate.
+    pdf, weights = np.unique(-pdf, return_counts=True)
+    pdf = - pdf
+    cum = integrate.cumtrapz(pdf * weights)
+    cum = np.concatenate([np.zeros(1), cum])
     cum /= cum[-1]
-    # Find the indices corresponding to the levels
-    j = np.argmax(cum[:, None] > pvals, axis=0)
-    # Evaluate the levels
-    return pdf.ravel()[idx][j]
+    # Find the first index that encloses more than the desired mass
+    js = np.argmax(cum[:, None] > pvals, axis=0)
+    levels = []
+    for j, pval in zip(js, pvals):
+        i = j - 1
+        # Get the upper and lower bounds and interpolate to find the best level.
+        y2 = cum[j]
+        y1 = cum[i]
+        x2 = pdf[j]
+        x1 = pdf[i]
+        slope = (y2 - y1) / (x2 - x1)
+        offset = y1 - slope * x1
+        level = (pval - offset) / slope
+        levels.append(level)
+
+    return np.asarray(levels)
+
+
+def evaluate_hpd_mass(pdf):
+    """
+    Evaluate the highest posterior density mass excluded from isocontours.
+
+    Parameters
+    ----------
+    pdf : array_like
+        Probability density function evaluated over a regular grid.
+
+    Returns
+    -------
+    excluded : array_like
+        The probability mass excluded at a given isocontour of the `pdf`.
+    """
+    shape = np.shape(pdf)
+    pdf = np.ravel(pdf)
+    idx = np.argsort(-pdf)
+    cum = np.cumsum(pdf[idx])
+    cum /= cum[-1]
+    return 1 - np.reshape(cum[np.argsort(idx)], shape)
