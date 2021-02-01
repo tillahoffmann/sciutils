@@ -6,8 +6,8 @@ from setuptools import setup, find_packages
 with open('README.rst') as fp:
     long_description = fp.read()
 long_description = long_description.replace('.. doctest::', '.. code-block:: python')
-long_description = re.sub(r'(\.\. automodule:: .*?$)', r':code:`\1`', long_description,
-                          flags=re.MULTILINE)
+long_description = re.sub(r'(\.\. automodule:: .*?$)|(\.\. toctree::)', r':code:`\1`',
+                          long_description, flags=re.MULTILINE)
 
 # Automatically determine the version to push to pypi
 github_ref = os.environ.get('GITHUB_REF', '')
