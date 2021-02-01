@@ -335,7 +335,7 @@ class ParameterReshaper:
 
     Examples
     --------
-    >>> reshaper = su.ParameterReshaper({'a': 2, 'b': (2, 3)})
+    >>> reshaper = su.stats.ParameterReshaper({'a': 2, 'b': (2, 3)})
     >>> reshaper.to_dict(np.arange(reshaper.size))  # doctest: +NORMALIZE_WHITESPACE
     {'a': array([0, 1]), 'b': array([[2, 3, 4], [5, 6, 7]])}
     """
