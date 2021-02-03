@@ -16,3 +16,4 @@ A collection of functionality useful for scientific computing.
 
    docs/plot
    docs/stats
+   docs/util

@@ -59,4 +59,5 @@ master_doc = 'README'
 doctest_global_setup = """
 import numpy as np
 import sciutils as su
+import sciutils.stats
 """
