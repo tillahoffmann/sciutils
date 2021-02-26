@@ -25,6 +25,9 @@ docs :
 lint :
 	flake8
 
-sdist :
+VERSION :
+	python generate_version.py
+
+sdist : VERSION
 	python setup.py sdist
 	twine check dist/*.tar.gz
