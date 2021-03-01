@@ -142,3 +142,5 @@ cython_debug/
 playground/
 .pystan
 result_images/
+
+VERSION
