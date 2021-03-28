@@ -18,6 +18,18 @@ def test_evaluate_pcolormesh_edges_log():
     np.testing.assert_allclose(ex, 2 ** (np.arange(4) - 0.5))
 
 
+def test_evaluate_pcolormesh_edges_logit():
+    x = [0.1, 0.5, 0.9]
+    ex = sp.evaluate_pcolormesh_edges(x, 'logit')
+    assert ex.shape == (4,)
+
+
+def test_evaluate_pcolormesh_edges_custom():
+    x = [0.1, 0.5, 0.9]
+    ex = sp.evaluate_pcolormesh_edges(x, (np.sqrt, np.square))
+    assert ex.shape == (4,)
+
+
 def test_evaluate_pcolormesh_edges_invalid():
     with pytest.raises(ValueError):
         sp.evaluate_pcolormesh_edges([], 'invalid')

@@ -2,6 +2,7 @@ import collections
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import special
 
 
 def evaluate_pcolormesh_edges(x, scale='linear'):
@@ -21,9 +22,19 @@ def evaluate_pcolormesh_edges(x, scale='linear'):
         Edges of pcolormesh cells.
     """
     if scale == 'log':
-        x = np.log(x)
-    elif scale != 'linear':
+        forward = np.log
+        backward = np.exp
+    elif scale == 'linear':
+        forward = backward = lambda x: x
+    elif scale == 'logit':
+        forward = special.logit
+        backward = special.expit
+    elif isinstance(scale, (tuple, list)):
+        forward, backward = scale
+    else:
         raise ValueError(scale)
+
+    x = forward(x)
 
     # Find the (n - 1) midpoints
     midpoints = (x[1:] + x[:-1]) / 2
@@ -32,10 +43,7 @@ def evaluate_pcolormesh_edges(x, scale='linear'):
     right = 2 * x[-1] - midpoints[-1]
     # Construct the edges
     edges = np.concatenate([[left], midpoints, [right]])
-
-    if scale == 'log':
-        edges = np.exp(edges)
-    return edges
+    return backward(edges)
 
 
 # Define all attributes that should be broadcast
